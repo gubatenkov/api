@@ -10,7 +10,20 @@ const getAllJobs = async (req, res) => {
 };
 
 const getJob = async (req, res) => {
-  res.status(200).json({ message: `get job with id: ${req.params.id}` });
+  const {
+    user: {
+      user: { userId },
+    },
+    params: { id: jobId },
+  } = req;
+  // check if job with such params exist in DB
+  const job = await Job.findOne({ _id: jobId, createdBy: userId });
+  // if not throw error
+  if (!job) {
+    throw new NotFoundError('job not found');
+  }
+  // else send job to the client
+  res.status(StatusCodes.OK).json(job);
 };
 
 const createJob = async (req, res) => {
@@ -23,7 +36,30 @@ const createJob = async (req, res) => {
 };
 
 const updateJob = async (req, res) => {
-  res.status(200).json({ message: `update job with id: ${req.params.id}` });
+  // get data from the query
+  const {
+    body: { company, position },
+    user: {
+      user: { userId },
+    },
+    params: { id: jobId },
+  } = req;
+  // validate data for updating the job
+  if (company === '' || position === '') {
+    throw new BadRequestError("compnay and position can't be empty");
+  }
+  // find job in DB
+  const job = await Job.findByIdAndUpdate(
+    { _id: jobId, createdBy: userId },
+    req.body,
+    { new: true, runValidators: true }
+  );
+  // throw error if there is no such job
+  if (!job) {
+    throw new NotFoundError(`there is no job with id:${jobId}`);
+  }
+  // response to the client
+  res.status(StatusCodes.OK).json(job);
 };
 
 const deleteJob = async (req, res) => {
